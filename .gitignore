@@ -1,0 +1,8 @@
+# Playwright
+test-results/
+playwright-report/
+test-results
+playwright-report
+
+# Node modules
+node_modules/
