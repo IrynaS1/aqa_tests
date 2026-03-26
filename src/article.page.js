@@ -27,40 +27,6 @@ export class ArticlePage {
     this.lastCommentCard = page.locator(".card-text").last();
     this.firstCommentCard = page.locator(".card-text").first();
     this.deleteCommentButton = page.locator(".card .card-block button").first();
-    /* this.editArticleButton = page.locator('a:has-text("Edit Article")');
-    this.deleteArticleButton = page.locator(
-      'button:has-text("Delete Article")',
-    );
-    this.commentInput = page.locator(
-      'textarea[placeholder="Write a comment..."]',
-    );
-    this.postCommentButton = page.locator('button:has-text("Post Comment")');
-    this.lastComment = page.locator(".card-block p").last();
-    this.lastCommentAuthor = page.locator(".card-footer a").last();
-    this.commentsList = page.locator(".card-block");
-  }
-
-  async clickEditArticle() {
-    await this.editArticleButton.click();
-  }
-
-  async clickDeleteArticle() {
-    await this.deleteArticleButton.click();
-  }
-
-  async fillComment(commentText) {
-    await this.commentInput.fill(commentText);
-  }
-
-  async postComment() {
-    await this.postCommentButton.click();
-  }
-
-  async deleteLastComment() {
-    const deleteButton = this.page.locator(".card-footer button").last();
-    await deleteButton.click();
- 
-   */
   }
 
   async editArticle() {
