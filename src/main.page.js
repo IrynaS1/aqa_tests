@@ -22,8 +22,17 @@ export class MainPage {
     this.authorArticle = page.locator(".author").first();
     this.dateArticle = page.locator(".date").first();
     this.blockTags = page.locator(".preview-link .tag-list .tag-pill").first();
-	  this.likesCountBtn = page.locator(".btn-outline-primary").first();
-	  this.likesCount = page.locator(".btn-outline-primary .counter").first();
+    this.likesCountBtn = page.locator(".btn-outline-primary").first();
+    this.likesCount = page.locator(".btn-outline-primary .counter").first();
+
+    this.createNewArtcileButton = page.getByRole("link", {
+      name: "New Article",
+	 });
+	  
+	this.userPic = page.locator(".user-pic");
+    this.userProfileLink = page.getByRole("link", {
+      name: "Profile",
+    });
   }
 
   async openPage() {
@@ -59,5 +68,14 @@ export class MainPage {
     await this.passwordInput.click();
     await this.passwordInput.fill(password);
     await this.loginButton.click();
+  }
+
+  async createNewArticle() {
+    await this.createNewArtcileButton.click();
+  }
+
+	async openUserProfile() {
+		await this.userPic.click();
+    await this.userProfileLink.click();
   }
 }

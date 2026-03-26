@@ -1,132 +1,163 @@
-
 import { test, expect } from "@playwright/test";
+import { faker, fakerRU } from "@faker-js/faker";
 import { MainPage } from "../src/main.page";
-import { UserFeedsPage } from "../src/userprofile.page";
+import { CreateNewArticlePage } from "../src/createNewArticle.page";
 import { ArticlePage } from "../src/article.page";
+import { UserProfilePage } from "../src/userprofile.page";
 
 const testUser = {
   userName: "Test123",
-	email: "test1234@ya.ru",
-	password: "123456"
+  email: "test1234@ya.ru",
+  password: "123456",
 };
 
-test("1. Проверка отображения списка статей, опубликованных пользователями (вкладка Global Feed)", async ({
+const testNewArticleData = {
+  title: faker.lorem.words(5),
+  description: faker.lorem.sentence({ min: 5, max: 7 }),
+  content: faker.lorem.sentences(4),
+  tags: "#lorem",
+};
+
+console.log(testNewArticleData.password);
+
+test("1. Создание новой статьи авторизованным пользователем", async ({
   page,
 }) => {
-  const openPage = new MainPage(page);
+  const mainPage = new MainPage(page);
+  const createNewArticlePage = new CreateNewArticlePage(page);
+  const articlePage = new ArticlePage(page);
 
-  await openPage.openPage();
+  await mainPage.openPage();
+  await mainPage.login(testUser);
 
-  await expect(openPage.globalTab).toBeVisible({ timeout: 10000 });
-  await expect(openPage.firstArticle).toBeVisible({ timeout: 10000 });
-  await expect(openPage.articles).toHaveCount(3);
+  await mainPage.createNewArticle();
+
+  const { title, description, content, tags } = testNewArticleData;
+  await createNewArticlePage.fillArticleForm(title, description, content, tags);
+
+  await createNewArticlePage.publishArticle();
+
+  const actualTitle = await articlePage.articleHeading.textContent();
+  await expect(actualTitle).toBe(title);
 });
 
-test("2. Проверка работы кнопок пагинации на странице со списком статей (вкладка Global Feed)", async ({
+test("2. Редактирование существующей статьи авторизованным пользователем", async ({
   page,
 }) => {
-  const openPage = new MainPage(page);
+  const mainPage = new MainPage(page);
+  const userProfilePage = new UserProfilePage(page);
+  const articlePage = new ArticlePage(page);
+  const createNewArticlePage = new CreateNewArticlePage(page);
 
-  await openPage.openPage();
+  await mainPage.openPage();
+  await mainPage.login(testUser);
 
-  await expect(openPage.pagination).toBeVisible({ timeout: 10000 });
-  await expect(openPage.secondPage).toBeVisible({ timeout: 10000 });
+  await mainPage.openUserProfile();
 
-  await openPage.paginationOperation();
-  await expect(openPage.globalTab).toBeVisible({ timeout: 10000 });
-  await expect(openPage.firstArticle).toBeVisible({ timeout: 10000 });
-	await expect(openPage.articles).toHaveCount(3);
-	
-	await openPage.goToNextPage();
-	await expect(openPage.globalTab).toBeVisible({ timeout: 10000 });
-   await expect(openPage.firstArticle).toBeVisible({ timeout: 10000 });
-   await expect(openPage.articles).toHaveCount(3);
-	await expect(openPage.currentPage).toHaveAttribute(
-    "aria-label",
-    "Page 3 is your current page",
-  );
+  await userProfilePage.openArticle();
 
-	await openPage.goToPreviousPage();
-	await expect(openPage.globalTab).toBeVisible({ timeout: 10000 });
-  await expect(openPage.firstArticle).toBeVisible({ timeout: 10000 });
-  await expect(openPage.articles).toHaveCount(3);
-  		await expect(openPage.currentPage).toHaveAttribute(
-        "aria-label",
-        "Page 2 is your current page",
-      );
+  const articleData = {
+    title: await articlePage.articleHeading.textContent(),
+    content: await articlePage.articleContent.textContent(),
+  };
+
+  await articlePage.editArticle();
+
+  await createNewArticlePage.clearArticleData();
+
+  const { title, description, content, tags } = testNewArticleData;
+  await createNewArticlePage.fillArticleForm(title, description, content, tags);
+
+  await createNewArticlePage.updateArticle();
+
+  const editedTitle = await articlePage.articleHeading.textContent();
+  const editedContent = await articlePage.articleContent.textContent();
+
+  await expect(editedTitle).not.toContain(articleData.title);
+  await expect(editedContent).not.toContain(articleData.content);
 });
 
-test("3. Проверка отображения элементов в карточке статьи - заголовок, описание, имя автора, дата, счётчик лайков, кнопка дл перехода на статью", async ({
-  page,
-}) => {
-  const openPage = new MainPage(page);
+test("3. Удаление статьи авторизованным пользователем", async ({ page }) => {
+  const mainPage = new MainPage(page);
+  const userProfilePage = new UserProfilePage(page);
+  const articlePage = new ArticlePage(page);
 
-  await openPage.openPage();
+  await mainPage.openPage();
+  await mainPage.login(testUser);
 
-	await expect(openPage.globalTab).toBeVisible({ timeout: 10000 });
-	await expect(openPage.firstArticle).toBeVisible({ timeout: 10000 });
-	await expect(openPage.headingArticle).toBeVisible({ timeout: 10000 });	
-	await expect(openPage.descriptionArticle).toBeVisible({ timeout: 10000 });	
-	await expect(openPage.goToArticleBtn).toBeVisible({ timeout: 10000 });	
-	await expect(openPage.authorArticle).toBeVisible({ timeout: 10000 });	
-	await expect(openPage.dateArticle).toBeVisible({ timeout: 10000 });
-	await expect(openPage.blockTags).toBeVisible({ timeout: 10000 });
-	await expect(openPage.likesCountBtn).toBeVisible({ timeout: 10000 });
+  await mainPage.openUserProfile();
+
+  await userProfilePage.openArticle();
+
+  const articleTitle = await articlePage.articleHeading.textContent();
+
+  const dialogConfirm = page.waitForEvent("dialog");
+  await articlePage.deleteArticle();
+  const dialog = await dialogConfirm;
+  await dialog.accept();
+
+  await mainPage.openPage();
+  await mainPage.openUserProfile();
+
+  const articleTitleFirst =
+    await userProfilePage.firstArticleHeading.textContent();
+
+  await expect(articleTitleFirst).not.toContain(articleTitle);
 });
 
-test("4. Проверка перехода к полной версии статьи кликом на карточку статьи", async ({
+test("4. Добавление комментария к статье авторизованным пользователем", async ({
   page,
 }) => {
-	const openPage = new MainPage(page);
-	const articlePage = new ArticlePage(page);
+  const mainPage = new MainPage(page);
+  const userProfilePage = new UserProfilePage(page);
+  const articlePage = new ArticlePage(page);
 
-  await openPage.openPage();
+  await mainPage.openPage();
+  await mainPage.login(testUser);
 
-  await expect(openPage.globalTab).toBeVisible({ timeout: 10000 });
-  await expect(openPage.firstArticle).toBeVisible({ timeout: 10000 });
+  await mainPage.openUserProfile();
 
-	await expect(openPage.goToArticleBtn).toBeVisible({ timeout: 10000 });
+	await userProfilePage.openArticle();
 	
-	let hArticle1 = await openPage.headingArticle.textContent();
-	
-	await openPage.goToArticle();
+  const addCommentText = faker.lorem.sentences(1);
+  await articlePage.postComment(addCommentText);
 
-	
-	let hArticle2 = await articlePage.articleHeading.textContent();
+  const lastCommentTextBefore = await articlePage.lastCommentCard.textContent();
 
-	await expect(hArticle2).toContain(hArticle1);
+  const commentText = faker.lorem.sentences(1);
+
+  await articlePage.postComment(commentText);
+
+  const lastCommentTextAfter = await articlePage.lastCommentCard.textContent();
+
+  await expect(articlePage.lastCommentCard).toBeVisible();
+  await expect(lastCommentTextAfter).toBe(lastCommentTextBefore);
+  await expect(articlePage.commentInput).toHaveValue("");
 });
 
-test("5. Клик на популярный тег в личном кабинете открывает новую вкладку со статьями, подобранными по тегу", async ({
+test("5. Удаление комментария авторизованным пользователем", async ({
   page,
 }) => {
-  const openPage = new MainPage(page);
-  const newTab = new UserFeedsPage(page);
+  const mainPage = new MainPage(page);
+  const userProfilePage = new UserProfilePage(page);
+  const articlePage = new ArticlePage(page);
 
-  await openPage.openPage();
-	await openPage.login(testUser);
-	
-	await expect(newTab.firstTagPill).toBeVisible({ timeout: 10000 });
+  await mainPage.openPage();
+  await mainPage.login(testUser);
 
-	let titleTag = await newTab.firstTagPill.textContent();
-	titleTag = titleTag.trim();
-	
-	await newTab.openTab();
+  await mainPage.openUserProfile();
 
-	await expect(newTab.activeTab).toBeVisible({ timeout: 10000 });
+  await userProfilePage.openArticle();
 
-	let tabTitle = await newTab.activeTab.textContent();
-	tabTitle = tabTitle.trim();
-	await expect(titleTag).toContain(tabTitle);
+  const commentTextFirst = faker.lorem.sentences(1);
 
-	 await expect(newTab.globalTab).toBeVisible({ timeout: 10000 });
-   await expect(newTab.firstArticle).toBeVisible({ timeout: 10000 });
-	await expect(newTab.articles).toHaveCount(3);
-	
-	await expect(newTab.articleTag).toBeVisible({ timeout: 10000 });
+  await articlePage.postComment(commentTextFirst);
 
-	let articleTagTitle = await newTab.articleTag.textContent();
-	articleTagTitle = articleTagTitle.trim();
-	
-	await expect(articleTagTitle).toContain(tabTitle);
+  const commentTextSecond = faker.lorem.sentences(1);
+
+  await articlePage.postComment(commentTextSecond);
+
+  const lastCommentText = await articlePage.lastCommentCard.textContent();
+
+  await expect(lastCommentText).not.toBe(commentTextSecond);
 });
